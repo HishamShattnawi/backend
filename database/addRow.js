@@ -11,9 +11,9 @@ function addRow(tableName, rowData) {
 
   try {
     const stmt = db.prepare(query);
-    stmt.run(...values);
+    var r = stmt.run(...values);
     console.log(`Row added successfully to ${tableName}.`);
-    return { state: true, msg: "Create User Successfully" };
+    return { state: true, index : r.lastInsertRowid , msg: "Create User Successfully" };
   } catch (err) {
     var msg = handleDatabaseError(err);
     return { state: false, msg: msg };
@@ -40,4 +40,3 @@ function handleDatabaseError(error) {
   }
 }
 module.exports = addRow;
-
