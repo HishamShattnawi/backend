@@ -13,7 +13,7 @@ const app = express();
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-const EXCEL_PATH = path.join(__dirname, "templates\\كشف شعبة 4 - 6.xlsx");
+const EXCEL_TEMPLATE = path.join(__dirname, 'templates', 'كشف شعبة 4 - 6.xlsx');
 
 app.post("/addStudent", (req, res) => {
   const { name, imageid } = req.body;
@@ -272,56 +272,61 @@ app.get("/getAllHws", (req, res) => {
   }
 });
 
-app.post("/exportExcel", async (req, res) => {
+app.post('/exportExcel', async (req, res) => {
   try {
     const { dayDate } = req.body;
+    if (!dayDate) return res.status(400).json({ error: 'dayDate مطلوب' });
 
-    const students = getRows("students");
+    // تأكد أن التمبلِيت موجود
+    if (!fs.existsSync(EXCEL_TEMPLATE)) {
+      return res.status(500).json({ error: 'ملف التمبلِيت غير موجود' });
+    }
 
+    // جهّز البيانات
+    const students = getRows('students');
+
+    // حمّل التمبلِيت
     const workbook = new ExcelJS.Workbook();
-
-    await workbook.xlsx.readFile(EXCEL_PATH);
-
+    await workbook.xlsx.readFile(EXCEL_TEMPLATE);
     const worksheet = workbook.worksheets[0];
 
     for (let i = 0; i < students.length; i++) {
-      const rects = getRows(
-        "Rects",
-        `WHERE student_id = '${students[i].id}' AND date = '${dayDate}'`
-      );
-      const hw = getRows("HW", `WHERE student_id = '${students[i].id}'`)[0];
+      const rects = getRows('Rects', `WHERE student_id='${students[i].id}' AND date='${dayDate}'`);
+      const hw = getRows('HW', `WHERE student_id='${students[i].id}'`)[0];
+
       worksheet.getCell(`A${i + 2}`).value = students[i].name;
-      var bValue = "";
+
+      let bValue = '';
       for (let j = 0; j < rects.length; j++) {
-        var isNewText = "";
-        if (rects[j].itsnew) {
-          isNewText = " (جديد)";
-        } else {
-          isNewText = "(مراجعة)";
-        }
-        if (j != rects.length - 1) {
-          bValue +=
-            rects[j].suraName + " " + rects[j].fromTo + " " + isNewText + "\n";
-        } else {
-          bValue += rects[j].suraName + " " + rects[j].fromTo + " " + isNewText;
-        }
-        // bValue +=
-        //   rects[j].suraName + " " + rects[j].fromTo + " " + isNewText + "\n";
+        const isNewText = rects[j].itsnew ? ' (جديد)' : '(مراجعة)';
+        bValue += `${rects[j].suraName} ${rects[j].fromTo} ${isNewText}`;
+        if (j !== rects.length - 1) bValue += '\n';
       }
-      worksheet.getCell(`B${i + 2}`).value = bValue == "" ? "لم يسمع" : bValue;
-      worksheet.getCell(`C${i + 2}`).value = hw?.hw ?? "";
+
+      worksheet.getCell(`B${i + 2}`).value = bValue === '' ? 'لم يسمع' : bValue;
+      worksheet.getCell(`C${i + 2}`).value = hw?.hw ?? '';
     }
 
-    await workbook.xlsx.writeFile(EXCEL_PATH);
+    // ابعث الملف كتحميل بدون حفظ
+    const fileName = `كشف-${dayDate}.xlsx`;
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    // Content-Disposition مع اسم عربي (RFC 5987)
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${fileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`
+    );
 
-    return res.json({ ok: true, message: "تم التحديث" });
+    await workbook.xlsx.write(res);
+    res.end();
   } catch (err) {
     console.error(err);
-    return res
-      .status(500)
-      .json({ error: "صار خطأ أثناء التحديث", details: err.message });
+    res.status(500).json({ error: 'صار خطأ أثناء التوليد', details: err.message });
   }
 });
+
 
 // Start the server and listen on port 3000
 const PORT = 3000;
