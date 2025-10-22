@@ -15,7 +15,7 @@ const app = express();
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-const EXCEL_TEMPLATE = path.join(__dirname, 'templates', 'كشف شعبة 4 - 6.xlsx');
+const EXCEL_TEMPLATE = path.join(__dirname, 'templates', 'ttt.xlsx');
 
 app.post("/addStudent", (req, res) => {
   const { name, imageid } = req.body;
