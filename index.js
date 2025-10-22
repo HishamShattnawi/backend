@@ -316,7 +316,7 @@ app.post('/exportExcel', async (req, res) => {
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     );
     // Content-Disposition مع اسم عربي (RFC 5987)
-    res.setHeader('Content-Disposition', `attachment; filename="${asciiName}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="report.xlsx"`);
 
 
     await workbook.xlsx.write(res);
